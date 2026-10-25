@@ -13,4 +13,12 @@
     <artifactId>jarvis-core</artifactId>
     <name>Jarvis Core</name>
     <description>Ports, pipeline orchestrator and domain model. No external dependencies.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>
