@@ -7,6 +7,8 @@
 
 Jarvis is a long-running process on a personal machine. It has to drive a microphone and speaker, call native speech engines, and talk to an HTTP API. Of the v1 engines, Picovoice Porcupine ships a Java SDK and Anthropic publishes a Java SDK for the Claude API. The speech engines (whisper.cpp, Piper) are native code and have no official Java SDK.
 
+Reem has 10+ years of Java/JEE experience. Building v1 in her strongest language keeps the focus on architecture and design rather than on learning a new language.
+
 ## Decision
 
 Write v1 in Java 25, built with Maven as a multi-module project (`jarvis-core`, `jarvis-adapters`, `jarvis-app`).
