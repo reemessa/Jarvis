@@ -3,12 +3,14 @@ package io.github.reemessa.jarvis.core;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.reemessa.jarvis.core.port.AudioRecorder;
 import io.github.reemessa.jarvis.core.port.Brain;
 import io.github.reemessa.jarvis.core.port.SpeechToText;
 import io.github.reemessa.jarvis.core.port.TextToSpeech;
 import io.github.reemessa.jarvis.core.port.WakeWordDetector;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class JarvisPipelineTest {
 
@@ -43,7 +46,9 @@ class JarvisPipelineTest {
         }
     };
 
+    private final FakeBrain brain = new FakeBrain();
     private final FakeTextToSpeech textToSpeech = new FakeTextToSpeech();
+    private final List<Duration> pauses = new ArrayList<>();
     private Stage failingStage;
 
     @BeforeEach
@@ -66,6 +71,7 @@ class JarvisPipelineTest {
 
         assertEquals(List.of("You said: what time is it", "You said: tell me a joke"), textToSpeech.spoken);
         assertEquals(List.of(), logRecords);
+        assertEquals(List.of(), pauses);
     }
 
     @ParameterizedTest
@@ -78,10 +84,11 @@ class JarvisPipelineTest {
 
         assertEquals(List.of("You said: tell me a joke"), textToSpeech.spoken);
         assertLoggedFailureOf(stage);
+        assertEquals(List.of(), pauses);
     }
 
     @Test
-    void keepsListeningWhenWakeWordDetectionFails() {
+    void pausesThenListensAgainWhenWakeWordDetectionFails() {
         failingStage = Stage.WAKE_WORD;
         var pipeline = pipelineHearing("what time is it");
 
@@ -89,6 +96,19 @@ class JarvisPipelineTest {
 
         assertEquals(List.of("You said: what time is it"), textToSpeech.spoken);
         assertLoggedFailureOf(Stage.WAKE_WORD);
+        assertEquals(List.of(Duration.ofSeconds(1)), pauses);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "  \t "})
+    void skipsTheBrainWhenNothingWasSaid(String silence) {
+        var pipeline = pipelineHearing(silence, "tell me a joke");
+
+        assertThrows(InterruptedException.class, pipeline::run);
+
+        assertEquals(List.of("tell me a joke"), brain.heard);
+        assertEquals(List.of("You said: tell me a joke"), textToSpeech.spoken);
+        assertTrue(logRecords.stream().noneMatch(r -> r.getLevel() == Level.SEVERE));
     }
 
     private JarvisPipeline pipelineHearing(String... utterances) {
@@ -96,8 +116,9 @@ class JarvisPipelineTest {
                 new FakeWakeWordDetector(utterances.length),
                 new FakeAudioRecorder(utterances),
                 new FakeSpeechToText(),
-                new FakeBrain(),
-                textToSpeech);
+                brain,
+                textToSpeech,
+                pauses::add);
     }
 
     private void assertLoggedFailureOf(Stage stage) {
@@ -156,10 +177,13 @@ class JarvisPipelineTest {
         }
     }
 
-    /** Echoes the user's text back. */
+    /** Echoes the user's text back, remembering everything it was asked. */
     private final class FakeBrain implements Brain {
+        private final List<String> heard = new ArrayList<>();
+
         @Override
         public String respond(String userText) {
+            heard.add(userText);
             failOnceAt(Stage.THINK);
             return "You said: " + userText;
         }
