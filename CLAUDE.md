@@ -40,4 +40,4 @@ Tests use hand-written fakes as inner classes, not a mocking library. `JarvisPip
 
 - `main` is protected and only takes pull requests (zero approvals required).
 - One feature branch per milestone, named like `feature/m1-hears`. Milestones in order: Hears, Thinks, Speaks, Remembers, Acts, Draco (cloned voice).
-- `docs/architecture.md` lists ADR-001 to ADR-005 under `docs/adr/`, but that directory is still empty.
+- Architecture decisions are recorded in `docs/adr/` as `ADR-NNN-<slug>.md`, each with Context, Decision and Trade-offs accepted sections.
